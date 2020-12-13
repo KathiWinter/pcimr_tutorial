@@ -88,7 +88,7 @@ class RobotMover:
         
         next_x = self.path.poses[i+1].pose.position.x
         next_y = self.path.poses[i+1].pose.position.y
-
+ 
         self.path.poses.pop(i)
 
         cartesian_move = [next_x-self.robot_pos.x, next_y-self.robot_pos.y]
