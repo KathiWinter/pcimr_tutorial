@@ -75,6 +75,7 @@ class RobotMover:
         self.robot_pos = msg
 
     def get_next_move(self):
+    
         current_pos_id = -1
         for i, pose in enumerate(self.path.poses):
             if pose.pose.position.x == self.robot_pos.x and pose.pose.position.y == self.robot_pos.y:
