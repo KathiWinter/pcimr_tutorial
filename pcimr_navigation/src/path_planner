@@ -20,7 +20,7 @@ class PathPlanner():
         self.map = OccupancyGrid()
         self.map_array = []
         self.robot_pos = Point()
-
+        
         # Initialize Subscribers
         self.sub_robot_pos = rospy.Subscriber('/robot_pos', Point, self.cb_robot_pos)
         self.sub_map = rospy.Subscriber('/map', OccupancyGrid, self.cb_map)
@@ -30,7 +30,7 @@ class PathPlanner():
         # Initialize Publishers
         self.pub_path_cells = rospy.Publisher('/global_path', Path, queue_size=10,latch=True)
         self.pub_goal_marker = rospy.Publisher('/visualization/goal', Marker, queue_size=10)
-        self.pub_path_line = rospy.Publisher('/visualization/plan', Marker,queue_size=10)
+        self.pub_path_line = rospy.Publisher('/visualization/plan', Marker,queue_size=10, latch=True)
 
         # Setup Messages for publishing
         self.msg_goal_marker = Marker()
@@ -177,39 +177,44 @@ class PathPlanner():
         return True
 
     def run(self, rate: float = 1):
+        
+        new_goal = None
         """
         Periodically publishes the move command based on the current path.
 
         @param rate: The rate at which the topics are published.
         """
         while not rospy.is_shutdown():
-       
+            
+     
             # Publish messages
-         
-            if(len(self.map_array) != 0 and self.map_array[int(self.goal.x)][int(self.goal.y)] == 0):
-                
-                self.pub_goal_marker.publish(self.msg_goal_marker)
+            if(self.goal != new_goal):
+                if(len(self.map_array) != 0 and self.map_array[int(self.goal.x)][int(self.goal.y)] == 0):
+                    
+                    new_goal = Point(self.goal.x, self.goal.y, self.goal.z)
 
-                path = self.astar_search()
-                recent_pos = self.robot_pos
-                poses = []
-                markers = []
-                for pose in path:
-                    current_pos = Point(pose.x+0.5, pose.y+0.5, 0.2)
-                    posestamped = PoseStamped()
-                    posestamped.header.frame_id = "path"
-                    posestamped.pose.position = pose
-                    posestamped.pose.orientation = Quaternion(0,0,0,1)
-                    poses.append(posestamped)
-                    markers.append(recent_pos)
-                    markers.append(current_pos)
-                    recent_pos = current_pos
-        
-                self.msg_path.poses = poses
-               
-                self.pub_path_cells.publish(self.msg_path)
-                self.msg_line_strip.points = markers
-                self.pub_path_line.publish(self.msg_line_strip)
+                    self.pub_goal_marker.publish(self.msg_goal_marker)
+
+                    path = self.astar_search()
+                    recent_pos = Point(self.robot_pos.x+0.5, self.robot_pos.y+0.5, 0.0)
+                    poses = []
+                    markers = []
+                    for pose in path:
+                        current_pos = Point(pose.x+0.5, pose.y+0.5, 0.2)
+                        posestamped = PoseStamped()
+                        posestamped.header.frame_id = "path"
+                        posestamped.pose.position = pose
+                        posestamped.pose.orientation = Quaternion(0,0,0,1)
+                        poses.append(posestamped)
+                        markers.append(recent_pos)
+                        markers.append(current_pos)
+                        recent_pos = current_pos
+            
+                    self.msg_path.poses = poses
+                
+                    self.pub_path_cells.publish(self.msg_path)
+                    self.msg_line_strip.points = markers
+                    self.pub_path_line.publish(self.msg_line_strip)
 
             # Sleep for a while before publishing new messages. 
             if rate:
